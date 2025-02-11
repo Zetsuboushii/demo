@@ -10,17 +10,16 @@ import java.lang.reflect.Array;
 import java.util.Arrays;
 
 /**
- * Array of UI Elements, 
- * Iterates through elements and calls functions from individual elements  
- * 
+ * Array of UI Elements,
+ * Iterates through elements and calls functions from individual elements
+ *
  * @author Eckhard Kruse
  */
 class UIElementList {
-    UIElement elements[];
+    UIElement[] elements;
 
     /**
      * Constructs a list of elements with some random data
-     * 
      */
     UIElementList() {
         elements = new UIElement[100];
@@ -32,54 +31,52 @@ class UIElementList {
 
     /**
      * updates all elements in the list
-     * 
+     *
      * @param dx relative motion in x
      * @param dy relative motion in y
-     */ 
+     */
     void update(double dx, double dy) {
-        for(UIElement element : elements) 
+        for (UIElement element : elements)
             element.move(dx, dy);
     }
 
     /**
-     * renders all elements in the list 
-     * 
-     * @param gc GraphicsContext required for rendering     
-     */ 
+     * renders all elements in the list
+     *
+     * @param gc GraphicsContext required for rendering
+     */
 
-    void render(GraphicsContext gc) {        
+    void render(GraphicsContext gc) {
         // TODO: Object occlusion -> e.g. sort array before rendering
         // TODO: Shadow
-        Arrays.sort(elements);
 
         for (UIElement element : elements)
             element.render(gc);
     }
-    
+
     /**
      * handles mouse movements and clicks
-     * 
-     * @param x mouse coordinate
-     * @param y mouse coordinate
+     *
+     * @param x    mouse coordinate
+     * @param y    mouse coordinate
      * @param mode distinguish between selection and dragging
-     */     
+     */
     void mouseMoved(double x, double y, int mode) {
-        int i=elements.length-1;
-        while(i>=0) {
-            if(elements[i].contains(x,y) || elements[i].getSelected()==2) {
-                if(elements[i].getSelected()==2 && mode==1)
-                    mode=2;
+        int i = elements.length - 1;
+        while (i >= 0) {
+            if (elements[i].contains(x, y) || elements[i].getSelected() == 2) {
+                if (elements[i].getSelected() == 2 && mode == 1)
+                    mode = 2;
                 elements[i].setSelected(mode);
                 i--;
                 break;
-            }
-            else
+            } else
                 elements[i].setSelected(0);
             i--;
         }
-        while(i>=0) {
+        while (i >= 0) {
             elements[i].setSelected(0);
             i--;
-        }        
+        }
     }
 }
