@@ -82,11 +82,9 @@ class UIElement {
      * @param mdy relative movement in y direction
      */
     void move(double mdx, double mdy) {
-        z += 0.02f;   // Simple example: slowly increase z distance to infinity
         // TODO: limit max. z
-        if (z > 1) z = 1;
         // TODO: Move element only, if selected
-        if (selected == 1) {
+        if (selected == 2) {
             x += mdx / scalePos;
             y += mdy / scalePos;
         }
@@ -100,7 +98,7 @@ class UIElement {
      */
     boolean contains(double x, double y) {
         // TODO: use shape.contains(...)
-        return false;
+        return shape.contains(x, y);
     }
 
     /**
@@ -111,7 +109,7 @@ class UIElement {
      */
     Color transformColor(Color c) {
         // TODO: Use this to adapt color according to depth
-        return new Color(c.getRed() * (1 - z), c.getGreen() * (1 - z), c.getBlue() * (1 - z), c.getOpacity());
+        return c.deriveColor(0, 1, 1 - (z * 0.5), 1);
     }
 
     /**
@@ -123,7 +121,7 @@ class UIElement {
         final double canvasWidth = gc.getCanvas().getWidth();
         final double canvasHeight = gc.getCanvas().getHeight();
 
-        double scaleSize = java.lang.Math.max(canvasWidth, canvasHeight);
+        double scaleSize = Math.max(canvasWidth, canvasHeight);
         // use z to calculate perspective object position and size
         scalePos = scaleSize * 0.9 * (1 + focusLengthTranslate) / (z + focusLengthTranslate);
         scaleSize = scaleSize * (1 + focusLength) / (z + focusLength);
@@ -138,7 +136,11 @@ class UIElement {
         // Store current object boundaries for click detection
         shape = new Rectangle(xc - ow / 2, yc - oh / 2, ow, oh);
 
-        // TODO: render depth clues based on z	
+        // TODO Render shadows
+        gc.setFill(colorShadow);
+        gc.fillRoundRect(xc - ow / 2 + 5, yc - oh / 2 + 5, ow, oh, ow / 5, ow / 5);
+
+        // TODO: render depth clues based on z
         gc.setFill(transformColor(selected == 0 ? col : (selected == 1 ? Color.BLUE : Color.WHITE)));
         gc.fillRoundRect(xc - ow / 2, yc - oh / 2, ow, oh, ow / 5, ow / 5);
 
@@ -146,9 +148,7 @@ class UIElement {
         gc.fillRoundRect(xc - ow / 2 + 4, yc - oh / 2 + 4, ow - 8, oh - 8, ow / 5 - 4, ow / 5 - 4);
 
         gc.setFill(transformColor(selected == 1 ? Color.BLUE : Color.WHITE));
-        gc.setFont(new Font("Arial", 50));  // TODO: Use scaleSize to adjust font size
+        gc.setFont(new Font("Arial", scaleSize / 30));  // TODO: Use scaleSize to adjust font size
         gc.fillText(txt, xc - ow / 4, yc + oh / 3);
     }
-
-    // TODO Render shadows
 }

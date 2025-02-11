@@ -59,6 +59,12 @@ public class IS02_TiefesGUI extends Application {
         scene.addEventHandler(MouseEvent.MOUSE_MOVED, evt -> mouseMoved(evt));
         scene.addEventHandler(MouseEvent.MOUSE_RELEASED, evt -> mouseReleased(evt));
 
+        scene.setOnScroll(evt -> {
+            double deltaZ = evt.getDeltaY() > 0 ? -0.1 : 0.05;
+            elements.scrollZ(actMouseX, actMouseY, deltaZ);
+            draw(gc);
+        });
+
         draw(gc);
 
         Timeline timeline = new Timeline(new KeyFrame(
@@ -77,7 +83,6 @@ public class IS02_TiefesGUI extends Application {
      * @param gc GraphicsContext
      */
     private void draw(GraphicsContext gc) {
-
         gc.setFill(UIElement.colorBackground);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
         elements.render(gc);
@@ -109,9 +114,15 @@ public class IS02_TiefesGUI extends Application {
      * @param evt event
      */
     private void mouseMoved(MouseEvent evt) {
+        oldMouseX = actMouseX;
+        oldMouseY = actMouseY;
         actMouseX = evt.getX();
         actMouseY = evt.getY();
+
+        double dx = actMouseX - oldMouseX;
+        double dy = actMouseY - oldMouseY;
         elements.mouseMoved(evt.getX(), evt.getY(), 1);
+        elements.update(dx, dy);
     }
 
     /**

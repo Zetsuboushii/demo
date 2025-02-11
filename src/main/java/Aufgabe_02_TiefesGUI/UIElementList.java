@@ -4,10 +4,11 @@ package Aufgabe_02_TiefesGUI;/*
  * Prof. Dr. Eckhard Kruse
  */
 
-import javafx.scene.canvas.GraphicsContext;
-
-import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.Comparator;
+
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.effect.BoxBlur;
 
 /**
  * Array of UI Elements,
@@ -49,6 +50,7 @@ class UIElementList {
     void render(GraphicsContext gc) {
         // TODO: Object occlusion -> e.g. sort array before rendering
         // TODO: Shadow
+        Arrays.sort(elements, Comparator.comparingDouble(UIElement::getZ));
 
         for (UIElement element : elements)
             element.render(gc);
@@ -77,6 +79,16 @@ class UIElementList {
         while (i >= 0) {
             elements[i].setSelected(0);
             i--;
+        }
+    }
+
+    void scrollZ(double x, double y, double deltaZ) {
+        for (UIElement element : elements) {
+            if (element.contains(x, y)) {
+                element.setZ(Math.max(0, Math.min(1.0, element.getZ() + deltaZ)));
+                Arrays.sort(elements, Comparator.comparingDouble(UIElement::getZ));
+                break;
+            }
         }
     }
 }
