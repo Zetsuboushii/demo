@@ -33,7 +33,7 @@ class UIElement {
     // Theme: Colors for object and shadows
     private static final Color[] colorObjects =
             {new Color(0.6, 0.9, 0.4, 1.0), new Color(0.7, 0.8, 0.4, 1.0), new Color(0.3, 0.7, 0.5, 1.0)};
-    private static final Color colorShadow = new Color(0.15, 0.2, 0.4, 1.0);
+    private static final Color colorShadow = new Color(0.15, 0.2, 0.4, 0.5);
     public static final Color colorBackground = new Color(0.3, 0.4, 0.6, 1.0);
 
     UIElement() {
@@ -109,7 +109,7 @@ class UIElement {
      */
     Color transformColor(Color c) {
         // TODO: Use this to adapt color according to depth
-        return c.deriveColor(0, 1, 1 - (z * 0.5), 1);
+        return c.deriveColor(0, 1, 1 - (z * 0.5), 1); // new Color
     }
 
     /**

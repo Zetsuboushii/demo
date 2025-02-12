@@ -50,7 +50,7 @@ class UIElementList {
     void render(GraphicsContext gc) {
         // TODO: Object occlusion -> e.g. sort array before rendering
         // TODO: Shadow
-        Arrays.sort(elements, Comparator.comparingDouble(UIElement::getZ));
+        Arrays.sort(elements, Comparator.comparingDouble(UIElement::getZ).reversed());
 
         for (UIElement element : elements)
             element.render(gc);
