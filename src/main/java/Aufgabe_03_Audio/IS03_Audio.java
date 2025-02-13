@@ -40,11 +40,14 @@ public class IS03_Audio extends Application {
         img = new ImageView("scene.jpg"); // Load image
         root.getChildren().add(img);
 
-        InteractiveAudioOutput audioOutput = new InteractiveAudioOutput();
+        // Pass the scene (so we can use its dimensions in the audio class)
+        InteractiveAudioOutput audioOutput = new InteractiveAudioOutput(scene);
 
         // Handlers to resize window
         scene.widthProperty().addListener(evt -> draw(scene));
         scene.heightProperty().addListener(evt -> draw(scene));
+
+        // Mouse moved => audio reaction
         scene.addEventHandler(MouseEvent.MOUSE_MOVED, evt -> audioOutput.mouseMoved(evt));
 
         stage.setTitle("Interaktive Systeme - IS03 - Interactive Audio Output");
@@ -55,7 +58,6 @@ public class IS03_Audio extends Application {
                 Duration.millis(50), evt -> audioOutput.audioUpdate()));
         timeline.setCycleCount(Animation.INDEFINITE);
         timeline.play();
-
     }
 
     /**
@@ -65,7 +67,7 @@ public class IS03_Audio extends Application {
      */
     private void draw(Scene scene) {
         // TODO: Verschiedene Oberflächen mit verschiedenen Klangeigenschaften
-        img.setFitWidth(scene.widthProperty().doubleValue());
-        img.setFitHeight(scene.heightProperty().doubleValue());
+        img.setFitWidth(scene.getWidth());
+        img.setFitHeight(scene.getHeight());
     }
 }

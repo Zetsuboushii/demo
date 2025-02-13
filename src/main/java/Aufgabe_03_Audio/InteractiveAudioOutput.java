@@ -5,10 +5,10 @@ package Aufgabe_03_Audio;/*
  */
 
 import java.io.BufferedInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
 
 import javax.sound.sampled.AudioFormat;
@@ -22,50 +22,95 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 /**
  * Timer-gesteuerte Audioausgabe, unter Berücksichtigung der Mausbewegung
  *
- * @author Eckhard Kruse
+ * @author
  */
 class InteractiveAudioOutput {
 
     double actX, actY, oldX, oldY;    // Alte + aktuelle Mausposition
-    double mouse_val1, mouse_val2;    // Mausbewegungsabhängige Werte
+    double mouse_val1, mouse_val2;    // Mausbewegungsabhängige Werte (z.B. Lautstärke, Pitch)
+    double pitchPointer = 0.0;        // Für "Tonhöhe" (Abspielgeschwindigkeit)
 
-    // Audio data
+    // Zwei verschiedene Sounds (für verschiedene "Materialien")
+    byte[] waterBuffer;
+    byte[] woodBuffer;
+    byte[] windBuffer;
+    // Welcher Puffer aktuell abgespielt wird
+    byte[] activeBuffer;
+
     SourceDataLine line;
-    byte val;
-    byte[] wavBuffer;
     byte[] wavOutput;
-    int bufPointer;
+    int bufLen = 4410;    // TODO: Welche Funktion hat dieser Parameter?
 
-    final int bufLen = 4410;    // TODO: Welche Funktion hat dieser Parameter? => Maximale "Länge" des abgespielten .wav-Clips?
+    private final Scene scene;
 
-    InteractiveAudioOutput() {
+    /**
+     * Konstruktor. Lädt zwei unterschiedliche WAVs ("water" und "wood")
+     * und öffnet eine Audio-Output-Line mit dem Format des water-Files.
+     */
+    InteractiveAudioOutput(Scene scene) {
+
+        this.scene = scene;
 
         wavOutput = new byte[bufLen];
-
-        // Werte mit Defaults initialisieren
         oldX = 0;
         oldY = 0;
-        mouse_val1 = mouse_val2 = 0;
-        bufPointer = 0;
+        mouse_val1 = 0;
+        mouse_val2 = 1.0; // Standard-Pitch
+
         try {
             // TODO: use different audio files for different screen regions
-            // open audio file and read it into byte buffer
-            InputStream audioSrc = getClass().getResourceAsStream("/water.wav");
-            if (audioSrc == null) {
-                System.err.println("Error: Audio file not found!");
+
+            // water.wav
+            InputStream waterStreamRaw = getClass().getResourceAsStream("/water.wav");
+            if (waterStreamRaw == null) {
+                System.err.println("Error: water.wav not found in resources!");
                 return;
             }
+            AudioInputStream waterAIS = AudioSystem.getAudioInputStream(
+                    new BufferedInputStream(waterStreamRaw));
+            AudioFormat waterFormat = waterAIS.getFormat();
+            System.out.println("Water.wav Format: " + waterFormat);
 
-            AudioInputStream stream = AudioSystem.getAudioInputStream(new BufferedInputStream(audioSrc));
-            AudioFormat format = stream.getFormat();
-            System.out.println("Wav File: " + format.getSampleRate() + " Hz, " + format.getSampleSizeInBits() + " Bits pro Sample"
-                    + " FrameSize: " + format.getFrameSize());
-            wavBuffer = new byte[(int) (format.getFrameSize() * stream.getFrameLength())];
-            stream.read(wavBuffer);
-            DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+            waterBuffer = new byte[(int) (waterFormat.getFrameSize() * waterAIS.getFrameLength())];
+            waterAIS.read(waterBuffer);
+
+            // wood.wav
+            InputStream woodStreamRaw = getClass().getResourceAsStream("/wood.wav");
+            if (woodStreamRaw == null) {
+                System.err.println("Error: wood.wav not found in resources!");
+                return;
+            }
+            AudioInputStream woodAIS = AudioSystem.getAudioInputStream(
+                    new BufferedInputStream(woodStreamRaw));
+            AudioFormat woodFormat = woodAIS.getFormat();
+            System.out.println("Wood.wav Format: " + woodFormat);
+
+            woodBuffer = new byte[(int) (woodFormat.getFrameSize() * woodAIS.getFrameLength())];
+            woodAIS.read(woodBuffer);
+
+            // wind.wav
+            InputStream windStreamRaw = getClass().getResourceAsStream("/wind.wav");
+            if (windStreamRaw == null) {
+                System.err.println("Error: wind.wav not found in resources!");
+                return;
+            }
+            AudioInputStream windAIS = AudioSystem.getAudioInputStream(
+                    new BufferedInputStream(windStreamRaw));
+            AudioFormat windFormat = windAIS.getFormat();
+            System.out.println("Wind.wav Format: " + windFormat);
+
+            windBuffer = new byte[(int) (windFormat.getFrameSize() * windAIS.getFrameLength())];
+            windAIS.read(windBuffer);
+
+            // Für Einfachheit gehen wir davon aus, dass beide WAVs dasselbe Format haben:
+            DataLine.Info info = new DataLine.Info(SourceDataLine.class, windFormat);
             line = (SourceDataLine) AudioSystem.getLine(info);
-            line.open(format, bufLen * 2);
+            line.open(windFormat, bufLen * 2);
             line.start();
+
+            // Starten wir erstmal mit "water" als default:
+            activeBuffer = waterBuffer;
+
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
             e.printStackTrace();
         }
@@ -79,32 +124,86 @@ class InteractiveAudioOutput {
      * @param e MouseEvent mit Koordinaten
      */
     void mouseMoved(MouseEvent e) {
-        // Mausgeschwindigkeit -> Lautstärke
-        // Maus Y-Koordinate -> Tonhöhe
-        // TODO: Bestimme Mausgeschwindigkeit mit oldX, oldY
-        mouse_val1 = 1.;
-        actX = e.getX();
-        actY = e.getY();
+        double dx = e.getX() - oldX;
+        double dy = e.getY() - oldY;
+        double speed = Math.sqrt(dx * dx + dy * dy);
+
+        // Mausgeschwindigkeit -> Lautstärke (z.B. 0..1)
+        // Hier etwas skaliert und gekappt bei 1.0
+        mouse_val1 = Math.min(speed / 10.0, 1.0);
+
+        // Maus Y-Koordinate -> Tonhöhe/Abspielgeschwindigkeit
+        // z.B. 0.5 (oben) .. 2.0 (unten)
+        double maxY = scene.getHeight();
+        double relativeY = e.getY() / maxY;    // 0.0..1.0
+        mouse_val2 = 0.5 + 1.5 * relativeY;    // 0.5..2.0
+
+        // TODO 2: verschiedene Klänge je nach Mausposition (x)
+        // Beispiel: obere Hälfte => wood/water, rechte Hälfte => water
+        if (e.getY() < scene.getHeight() / 2.0) {
+            if (e.getX() < scene.getWidth() / 2.0) {
+                activeBuffer = woodBuffer;
+            } else {
+                activeBuffer = windBuffer;
+            }
+        } else {
+            activeBuffer = waterBuffer;
+        }
+
+        // Update old coords
+        oldX = e.getX();
+        oldY = e.getY();
     }
 
     /**
      * Timer-gesteuerte Audioausgabe
      */
     void audioUpdate() {
+        if (line == null) {
+            // Falls kein Audio-Stream geöffnet werden konnte
+            return;
+        }
         if (line.available() >= bufLen) { // genug Platz für neue Daten
-            for (int i = 0; i < bufLen; i++) {
-                // TODO: Lineare Interpolation zwischen 2 Samples
-                int val = (int) wavBuffer[bufPointer] & 255;
-                // val = 128 ist Nulllinie, Wertebereich 0-255
+            // TODO: Lineare Interpolation zwischen 2 Samples
+            // TODO: Y -> variable Schrittweite -> Tonhöhe
+            // TODO: Lautstärke abhängig von Mausgeschwindigkeit
 
-                // TODO: Y -> variable Schrittweite -> Tonhöhe
-                // TODO: Lautstärke abhängig von Mausgeschwindigkeit
-                bufPointer = (bufPointer + 1) % (wavBuffer.length - 1);
-                wavOutput[i] = (byte) val;
+            for (int i = 0; i < bufLen; i++) {
+                // pitchPointer wird je Sample um "mouse_val2" erhöht:
+                pitchPointer += mouse_val2;
+
+                // Integer-Index in activeBuffer:
+                int idx = (int) pitchPointer % activeBuffer.length;
+                int nextIdx = (idx + 1) % activeBuffer.length;
+
+                // "fraction" ist der Nachkommateil -> für Interpolation
+                double fraction = pitchPointer - Math.floor(pitchPointer);
+
+                // Original-Samples (0..255), Nulllinie ~128
+                // => in [-128..127]-Bereich verschieben
+                double s1 = (activeBuffer[idx] & 0xff) - 128;
+                double s2 = (activeBuffer[nextIdx] & 0xff) - 128;
+
+                // Lineare Interpolation
+                double sample = s1 + fraction * (s2 - s1);
+
+                // Lautstärke anpassen (mouse_val1)
+                sample *= mouse_val1;
+
+                // Zurück in [0..255] verschieben
+                sample += 128;
+
+                // Clampen
+                if (sample < 0) sample = 0;
+                if (sample > 255) sample = 255;
+
+                // Byte speichern
+                wavOutput[i] = (byte) (sample);
             }
             line.write(wavOutput, 0, bufLen);
         }
-        mouse_val1 *= 0.5; // Fade out
+
+        // Fade-Out für nächste Runde
+        mouse_val1 *= 0.5;
     }
 }
-
